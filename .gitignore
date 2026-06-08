@@ -1,0 +1,66 @@
+# dependencies
+node_modules/
+
+# logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# env files
+.env
+.env.*
+!.env.example
+
+# build files
+dist/
+build/
+
+# cache
+.cache/
+.tmp/
+temp/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# docker
+docker-data/
+*.pid
+
+# coverage
+coverage/
+
+# testing
+.nyc_output/
+
+# runtime
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# optional npm cache
+.npm/
+
+# TypeScript
+*.tsbuildinfo
+
+# Redis dump files
+dump.rdb
+
+# local databases
+*.sqlite
+
+# uploads
+uploads/
+
+# misc
+*.local
