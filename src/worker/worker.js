@@ -5,6 +5,7 @@ const config = require('../config');
 
 const subscriber = createClient();  // blocks on BRPOPLPUSH
 const publisher  = createClient();  // free for other commands
+const pubClient = createClient();  // third client, for pub/sub publishing
 
 const WORKER_ID = `worker-${process.pid}`;
 
@@ -38,6 +39,12 @@ async function processJob(jobId) {
 
     await publisher.lrem('job_processing', 1, jobId);
     console.log(`[${WORKER_ID}] Job ${job.id} completed`);
+
+    await emitJobUpdate('job:updated', {
+        id:          job.id,
+        status:      'completed',
+        completedAt: new Date().toISOString(),
+    });
 
   } catch (err) {
     console.error(`[${WORKER_ID}] Job ${job.id} failed:`, err.message);
@@ -80,9 +87,11 @@ async function handleFailure(job, errorMessage) {
     );
     await publisher.lpush(config.queues.dead, job.id);
     await publisher.lrem(config.queues.processing, 1, job.id);
+    await emitJobUpdate('job:updated', { id: job.id, status: 'failed' });
     console.log(`[${WORKER_ID}] Job ${job.id} moved to dead letter queue after ${newRetryCount} attempts`);
     return;
   }
+
 
   // Exponential backoff: 1s, 2s, 4s
   const delay = Math.pow(2, newRetryCount) * 1000;
@@ -99,6 +108,8 @@ async function handleFailure(job, errorMessage) {
   console.log(`[${WORKER_ID}] Job ${job.id} will retry in ${delay}ms (attempt ${newRetryCount}/${job.max_retries})`);
   await sleep(delay);
   await publisher.lpush(config.queues.main, job.id);
+  await emitJobUpdate('job:updated', { id: job.id, status: 'pending', retryCount: newRetryCount });
+
 }
 
 async function run() {
@@ -129,8 +140,6 @@ function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-// src/worker/worker.js  — add this before the run() call
-
 async function waitForRedis(client, maxAttempts = 10) {
   for (let i = 1; i <= maxAttempts; i++) {
     try {
@@ -145,6 +154,9 @@ async function waitForRedis(client, maxAttempts = 10) {
   throw new Error('Redis not available after max attempts');
 }
 
+function emitJobUpdate(event, data) {
+  return pubClient.publish('job:events', JSON.stringify({ event, data }));
+}
 
 
 run().catch((err) => {

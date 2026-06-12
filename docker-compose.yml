@@ -48,6 +48,14 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-
+  dashboard:
+    build:
+      context: ./dashboard
+      dockerfile: Dockerfile
+    ports:
+      - "8080:80"
+    depends_on:
+      - api
+      
 volumes:
   postgres_data:

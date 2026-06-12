@@ -26,6 +26,15 @@ router.post('/', async (req, res) => {
 
     await redisClient.lpush('job_queue', job.id);
 
+    const io = req.app.get('io');
+    io.emit('job:created', {
+      id:        job.id,
+      type:      job.type,
+      status:    job.status,
+      payload:   payload,
+      createdAt: job.created_at,
+    });
+
     return res.status(202).json({
       jobId:     job.id,
       type:      job.type,
@@ -130,6 +139,12 @@ router.post('/:id/replay', async (req, res) => {
     const job = result.rows[0];
     await redisClient.lpush('job_queue', job.id);
 
+    const io = req.app.get('io');
+    io.emit('job:updated', {
+      id:     job.id,
+      status: 'pending',
+    });
+    
     return res.json({
       message: 'Job requeued',
       jobId:   job.id,
